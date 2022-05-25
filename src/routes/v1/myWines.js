@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 const { mySQLconfig, jwtSecret } = require('../../config');
 
-const patientShemas = require('../../models/winesSchemas');
+const myWinesSchemas = require('../../models/myWinesSchemas');
 
 const { isLoggedIn } = require('../../middleware/authorization');
 const validation = require('../../middleware/validation');
@@ -12,72 +12,56 @@ const validation = require('../../middleware/validation');
 const router = express.Router();
 
 router.post(
-  '/update_amount',
+  '/add',
   isLoggedIn,
-  validation(patientShemas, 'addPatientSchema'),
+  validation(myWinesSchemas, 'addMyWineSchema'),
   async (req, res) => {
     try {
-      req.body.doctor = jwt.verify(
+      req.body.user = jwt.verify(
         req.headers.authorization.split(' ')[1],
         jwtSecret,
       );
-
       const con = await mysql.createConnection(mySQLconfig);
 
-      const [duplicateAccount] = await con.execute(`
-  SELECT * FROM patient
-  WHERE email = ${mysql.escape(
-    req.body.email,
-  )} OR identity_code = ${mysql.escape(req.body.identity_code)}
-  `);
+      const [wineCollection] = await con.execute(`
+      SELECT wine_id, user_id, quantity FROM collections
+      WHERE user_id = ${mysql.escape(
+        req.body.user.id,
+      )} AND wine_id = ${mysql.escape(req.body.wine_id)}
+      `);
 
-      if (duplicateAccount.length !== 0) {
-        const [relationship] = await con.execute(`
-        SELECT * FROM doctor_patient
-        WHERE doctor_id = ${mysql.escape(req.body.doctor.id)} 
-        AND patient_id = ${mysql.escape(duplicateAccount[0].id)}
-        `);
-
-        if (relationship.length > 0) {
-          await con.end();
-          return res
-            .status(400)
-            .send({ error: 'This patient is already assigned to you.' });
-        }
-
-        const [response] = await con.execute(`
-        INSERT INTO doctor_patient (doctor_id, patient_id)
-        VALUES(${mysql.escape(req.body.doctor.id)}, ${mysql.escape(
-          duplicateAccount[0].id,
-        )})
-        `);
+      if (wineCollection.length !== 0) {
+        const [data] = await con.execute(`
+            UPDATE collections
+            SET quantity = quantity + ${mysql.escape(req.body.quantity)}
+            WHERE wine_id = ${mysql.escape(
+              req.body.wine_id,
+            )} AND user_id =  ${mysql.escape(req.body.user.id)};
+            `);
 
         await con.end();
 
-        if (!response.affectedRows) {
+        if (!data.affectedRows) {
           return res
             .status(500)
             .send({ error: 'Server error. Try again later.' });
         }
 
         return res.send({
-          msg: 'This patient already exists. We assigned the pattient to you :)',
+          msg: 'Collection updated',
         });
       }
 
       const [data] = await con.execute(`
-      INSERT INTO patient (first_name, last_name, birth_date, gender, phone_number, email, photo, identity_code)
+      INSERT INTO collections (wine_id, user_id, quantity)
   
-      VALUES (${mysql.escape(req.body.first_name)}, ${mysql.escape(
-        req.body.last_name,
-      )}, ${mysql.escape(req.body.birth_date)}, ${mysql.escape(
-        req.body.gender,
-      )}, ${mysql.escape(req.body.phone_number)}, ${mysql.escape(
-        req.body.email,
-      )},${mysql.escape(req.body.photo)}, ${mysql.escape(
-        req.body.identity_code,
-      )})
+      VALUES (
+      ${mysql.escape(req.body.wine_id)},
+       ${mysql.escape(req.body.user.id)},
+       ${mysql.escape(req.body.quantity)}
+      )
       `);
+      await con.end();
 
       if (!data.affectedRows) {
         return res
@@ -85,27 +69,7 @@ router.post(
           .send({ error: 'Server error. Try again later.' });
       }
 
-      const [insertedPatient] = await con.execute(`
-      SELECT id FROM patient
-      WHERE email = ${mysql.escape(
-        req.body.email,
-      )} OR identity_code = ${mysql.escape(req.body.identity_code)}
-      `);
-
-      if (insertedPatient.length === 1) {
-        const [addRelationship] = await con.execute(`
-      INSERT INTO doctor_patient (doctor_id, patient_id)
-      VALUES(${mysql.escape(req.body.doctor.id)}, ${mysql.escape(
-          insertedPatient[0].id,
-        )})
-      `);
-        if (!addRelationship.affectedRows) {
-          return res.send({ msg: 'Server error. Try again later.' });
-        }
-      }
-
-      await con.end();
-      return res.send({ msg: 'Patient added' });
+      return res.send({ msg: 'My collection updated' });
     } catch (err) {
       console.log(err);
       return res.status(500).send({ error: 'Server error. Try again later.' });
@@ -113,26 +77,24 @@ router.post(
   },
 );
 
-router.get('/get_collection', isLoggedIn, async (req, res) => {
+router.get('/get_my_collection', isLoggedIn, async (req, res) => {
   try {
-    // Get all wines
-    req.body.doctor = jwt.verify(
+    // Get all wines that belong to the user
+    req.body.user = jwt.verify(
       req.headers.authorization.split(' ')[1],
       jwtSecret,
     );
-
     const con = await mysql.createConnection(mySQLconfig);
 
     const [data] = await con.execute(`
-      SELECT first_name, last_name, birth_date, gender,
-       email, photo, patient_id
-       FROM patient
-      JOIN doctor_patient
-       ON doctor_patient.patient_id = patient.id
-  WHERE doctor_id = ${mysql.escape(req.body.doctor.id)} AND archived = ${0}
+    SELECT title, year, region, quantity
+    FROM wines
+   JOIN collections
+    ON collections.wine_id = wines.id
+WHERE user_id = ${mysql.escape(req.body.user.id)}
   `);
     await con.end();
-    return res.send({ patients: data });
+    return res.send({ MyCollection: data });
   } catch (err) {
     console.log(err);
     return res.status(500).send({ error: 'Server error. Try again later.' });

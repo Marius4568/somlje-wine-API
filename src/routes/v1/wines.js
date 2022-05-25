@@ -6,6 +6,10 @@ const { mySQLconfig } = require('../../config');
 const winesSchemas = require('../../models/winesSchemas');
 
 const { isLoggedIn } = require('../../middleware/authorization');
+const {
+  validateResultsQuery,
+} = require('../../middleware/validateResultsQuery');
+
 const validation = require('../../middleware/validation');
 
 const router = express.Router();
@@ -36,7 +40,7 @@ WHERE title = ${mysql.escape(req.body.title)}
     VALUES ( 
         ${mysql.escape(req.body.title)},
         ${mysql.escape(req.body.region)},
-         ${mysql.escape(req.body.year)}
+        ${mysql.escape(req.body.year)}
         )
     `);
       await con.end();
@@ -55,14 +59,14 @@ WHERE title = ${mysql.escape(req.body.title)}
   },
 );
 
-router.get('/get_all', isLoggedIn, async (req, res) => {
+router.get('/get_all', isLoggedIn, validateResultsQuery, async (req, res) => {
   try {
-    // Get all wines
     const con = await mysql.createConnection(mySQLconfig);
 
     const [wines] = await con.execute(`
     SELECT title, region, year
      FROM wines
+    LIMIT ${req.body.results ? req.body.results : 10000}
 `);
     await con.end();
 
