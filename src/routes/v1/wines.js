@@ -6,9 +6,7 @@ const { mySQLconfig } = require('../../config');
 const winesSchemas = require('../../models/winesSchemas');
 
 const { isLoggedIn } = require('../../middleware/authorization');
-const {
-  validateResultsQuery,
-} = require('../../middleware/validateResultsQuery');
+const { validateResults } = require('../../middleware/validateResultsQuery');
 
 const validation = require('../../middleware/validation');
 
@@ -23,9 +21,9 @@ router.post(
       const con = await mysql.createConnection(mySQLconfig);
 
       const [wineDuplicate] = await con.execute(`
-SELECT title FROM wines
-WHERE title = ${mysql.escape(req.body.title)}
-`);
+        SELECT title FROM wines
+        WHERE title = ${mysql.escape(req.body.title)}
+        `);
 
       if (wineDuplicate.length !== 0) {
         await con.end();
@@ -35,14 +33,14 @@ WHERE title = ${mysql.escape(req.body.title)}
       }
 
       const [data] = await con.execute(`
-    INSERT INTO wines (title, region, year)
+        INSERT INTO wines (title, region, year)
 
-    VALUES ( 
-        ${mysql.escape(req.body.title)},
-        ${mysql.escape(req.body.region)},
-        ${mysql.escape(req.body.year)}
-        )
-    `);
+        VALUES ( 
+            ${mysql.escape(req.body.title)},
+            ${mysql.escape(req.body.region)},
+            ${mysql.escape(req.body.year)}
+            )
+        `);
       await con.end();
 
       if (!data.affectedRows) {
@@ -59,7 +57,7 @@ WHERE title = ${mysql.escape(req.body.title)}
   },
 );
 
-router.get('/get_all', isLoggedIn, validateResultsQuery, async (req, res) => {
+router.get('/get_all', isLoggedIn, validateResults, async (req, res) => {
   try {
     const con = await mysql.createConnection(mySQLconfig);
 

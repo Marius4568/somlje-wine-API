@@ -1,3 +1,4 @@
+/* eslint-disable newline-per-chained-call */
 const Joi = require('joi');
 
 const registerSchema = Joi.object({

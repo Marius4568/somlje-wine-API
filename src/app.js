@@ -20,6 +20,4 @@ app.get('/', (req, res) => {
 
 app.all('*', (req, res) => res.status(404).send({ error: 'Page not found' }));
 
-app.listen(serverPort, () =>
-  console.log(`Server is running on port ${serverPort}`),
-);
+app.listen(serverPort, () => console.log(`Running on port ${serverPort}`));
