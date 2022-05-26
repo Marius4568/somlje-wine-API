@@ -6,7 +6,9 @@ const { mySQLconfig } = require('../../config');
 const winesSchemas = require('../../models/winesSchemas');
 
 const { isLoggedIn } = require('../../middleware/authorization');
-const { validateResults } = require('../../middleware/validateResultsQuery');
+const {
+  validateResultsQuery,
+} = require('../../middleware/validateResultsQuery');
 
 const validation = require('../../middleware/validation');
 
@@ -57,7 +59,7 @@ router.post(
   },
 );
 
-router.get('/get_all', isLoggedIn, validateResults, async (req, res) => {
+router.get('/get_all', isLoggedIn, validateResultsQuery, async (req, res) => {
   try {
     const con = await mysql.createConnection(mySQLconfig);
 
