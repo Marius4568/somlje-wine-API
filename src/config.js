@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 module.exports = {
-  serverPort: process.env.SERVER_PORT,
+  serverPort: process.env.PORT || process.env.SERVER_PORT,
   jwtSecret: process.env.JWT_SECRET,
   mySQLconfig: {
     database: process.env.MYSQL_DB,
